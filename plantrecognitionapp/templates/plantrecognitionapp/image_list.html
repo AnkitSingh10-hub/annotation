@@ -2,15 +2,39 @@
 {% load static %}
 
 <html>
-<head>
+  <head>
+    <!-- Font Awesome -->
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <!-- Google Fonts -->
+    <link
+      href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap"
+      rel="stylesheet"
+    />
+    <!-- MDB -->
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/6.4.1/mdb.min.css"
+      rel="stylesheet"
+    />
+    <!-- MDB -->
+    <script
+      type="text/javascript"
+      src="https://cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/6.4.1/mdb.min.js"
+    ></script>
     <title>Plant Images</title>
-</head>
-<body>
+  </head>
+  <body>
     <h1>Plant Images</h1>
     <ul>
-        {% for image in object_list %}
-        <li><a href="{% url 'plantrecognitionapp:image_detail' image.pk %}">{{ image.name }}</a></li>
-        {% endfor %}
+      {% for image in object_list %}
+      <li>
+        <a href="{% url 'plantrecognitionapp:image_detail' image.pk %}"
+          >{{ image.name }}</a
+        >
+      </li>
+      {% endfor %}
     </ul>
-</body>
+  </body>
 </html>
