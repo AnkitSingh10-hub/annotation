@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+{% load static %}
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Annotorious | Basic Example</title>
+    <link href="https://fonts.googleapis.com/css?family=Lato&display=swap" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <link rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/annotorious.min.css' %}">
+
+    <script src="{% static 'js/annotorious.min.js' %}"></script>
+    <script src="{% static 'js/annotations.w3c.js' %}"></script>
+    <script src="{% static 'js/recogito-polyfills.js' %}"></script>
+    <style>
+      html, body {
+        padding:20px;
+        margin:0px;
+        font-family:'Lato', sans-serif;
+      }
+      
+      #content {
+        width:100%;
+      }
+
+      h1 {
+        font-size:21px;
+        font-weight:normal;
+        margin:0;
+        padding:0;
+      }
+
+      p.instructions {
+        padding:10px 0;
+      }
+
+      img {
+        max-width:100%;
+      }
+
+      p.caption {
+        font-family:Arial, Helvetica, sans-serif;
+        color:#8f8f8f;
+      }
+
+      p.caption a {
+        color:#3f3f3f;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="content">    
+      <h1>Annotorious: Basic Example</h1>  
+      <p class="instructions">
+        Click the annotation to edit. Click and drag the mouse to create a new annotation.
+      </p>
+      <p>
+        <button id="current-tool">RECTANGLE</button>
+      </p>
+      <div>
+        <img id="hallstatt" src="{{object.image.url}}" width="350" height="350">
+      </div>
+    </div>
+  </div>
+    <script>
+      window.onload = function() {
+        anno = Annotorious.init({
+          image: 'hallstatt',
+          locale: 'auto',
+          drawOnSingleClick: true,
+          enableEdgeControls: true,
+          widgets: [
+            { widget: 'COMMENT' },
+            { widget: 'TAG', vocabulary: [ 'Animal', 'Building', 'Waterbody'] }
+          ]
+        });
+
+        anno.setAuthInfo({
+          id: 'http://www.example.com/rainer',
+          displayName: 'rainer'
+        });
+
+        anno.on('selectAnnotation', function(a, shape) {
+          console.log('selected');
+        });
+
+        anno.on('cancelSelected', function(a) {
+          console.log('cancel');
+        });
+
+        anno.on('changeSelected', function(selected, previous) {
+          console.log('changed from', previous, 'to', selected);
+        });
+
+       
+        anno.on('createAnnotation', function(annotation) {
+          console.log('created annotation', annotation);
+      
+          // Extract annotation data
+          var imageId = 100; // Assuming this is the way to get the image ID
+          var x = annotation.x;
+          var y = annotation.y;
+          var width = annotation.width;
+          var height = annotation.height;
+          var color = annotation.color;
+      
+          // Create a data object to send to the server
+          var annotationData = {
+              image_id: imageId,
+              x: x,
+              y: y,
+              width: width,
+              height: height,
+              color: color
+          };
+      
+          // Send the data to the server using AJAX
+          $.ajax({
+              url: '/save_annotation/', // Update this URL to match your server's endpoint
+              type: 'POST',
+              data: annotationData,
+              success: function(response) {
+                  console.log('Server response:', response.message);
+              },
+              error: function(error) {
+                  console.error('Error:', error);
+              }
+          });
+      });
+      
+
+        anno.on('updateAnnotation', function(annotation, previous) {
+          console.log('updated', previous, 'with', annotation);
+        });
+
+        anno.on('clickAnnotation', function(annotation, shape) {
+          console.log('clicked', annotation);
+        });
+
+        anno.on('deleteAnnotation', function(annotation) {
+          console.log('deleted', annotation);
+        });
+
+        anno.on('mouseEnterAnnotation', function(annotation) {
+          console.log('enter', annotation);
+        });
+        
+        anno.on('mouseLeaveAnnotation', function(annotation) {
+          console.log('leave', annotation);
+        });
+        
+
+        var toolToggle = document.getElementById('current-tool');
+        toolToggle.addEventListener('click', function() {
+          if (toolToggle.innerHTML == 'RECTANGLE') {
+            toolToggle.innerHTML = 'POLYGON';
+            anno.setDrawingTool('polygon');
+          } else {
+            toolToggle.innerHTML = 'RECTANGLE';
+            anno.setDrawingTool('rect');
+          }
+        });
+      }
+    </script>
+  </body>
+</html>

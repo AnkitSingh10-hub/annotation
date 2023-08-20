@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+{% load static %}
+
+<html>
+<head>
+    <title>Plant Images</title>
+</head>
+<body>
+    <h1>Plant Images</h1>
+    <ul>
+        {% for image in object_list %}
+        <li><a href="{% url 'plantrecognitionapp:image_detail' image.pk %}">{{ image.name }}</a></li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
