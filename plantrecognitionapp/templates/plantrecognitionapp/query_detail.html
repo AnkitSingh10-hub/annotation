@@ -1,0 +1,1462 @@
+{% load app_tags mptt_tags static widget_tweaks l10n i18n %}
+
+<style>
+    .plant-query-list {
+    {#margin: 20px 0px;#}{#background-color: white;#} padding: 15px;
+    }
+
+    .plant-image-description {
+        margin-top: 10px;
+        font-size: 13px;
+    }
+
+    .plant-descp-title {
+        margin: 5px 0px;
+    }
+
+    .expand-btn {
+        font-size: 10px;
+        color: #23c6c8;
+
+    }
+
+    .expand-btn:hover {
+        cursor: pointer;
+    }
+
+    div.children > * {
+        margin-top: 30px;
+    }
+
+    .reply-btn-wrapper {
+        margin-left: 40px /**width: 89%;
+            float: right;
+            clear: both;
+            margin-bottom: 15px;*/
+    }
+
+    ul.children {
+    {#margin-top: 20px;#}
+    }
+
+    ul.children > div > div {
+        width: 100%;
+    }
+
+    ul.children > div > .reply-btn-wrapper {
+        float: none;
+        margin-bottom: 0px;
+        min-height: 30px;
+    }
+
+    ul.children > div > ul.children {
+        margin-top: 0px;
+    }
+
+
+    .comment-background {
+        background: #d3d3d361;
+        padding: 10px 12px;
+        border-radius: 20px;
+        margin-right: 10px;
+        margin-bottom: 20px;
+    }
+
+    .replyBtn {
+        margin-right: 10px;
+    }
+    .lg-image {
+        max-height: 100vh!important;
+    }
+
+</style>
+
+<style>
+/** Hides the outer shapes - for this style we only need one **/
+svg.a9s-annotationlayer .a9s-selection .a9s-outer,
+svg.a9s-annotationlayer .a9s-annotation .a9s-outer {
+    // display: none
+}
+
+svg.a9s-annotationlayer .a9s-handle .a9s-handle-outer {
+    display: none;
+}
+
+/** New style for the annotation outlines **/
+svg.a9s-annotationlayer .a9s-selection .a9s-inner,
+svg.a9s-annotationlayer .a9s-annotation .a9s-inner {
+    stroke-width: 2;
+    stroke: white;
+    // stroke-dasharray: 5;
+}
+
+/** Disable the hover effect from the default stylesheet **/
+svg.a9s-annotationlayer .a9s-annotation.editable:hover .a9s-inner {
+    fill: transparent;
+}
+
+/** Corner handles **/
+svg.a9s-annotationlayer .a9s-handle .a9s-handle-inner {
+    fill: white;
+    stroke: white;
+}
+
+/** Enable the dim mask, black with 60% transparency **/
+svg.a9s-annotationlayer .a9s-selection-mask {
+    fill: rgba(0, 0, 0, 0.6);
+}
+
+.annotationTags {
+    font-size: 120px;
+    fill: white;
+    filter: drop-shadow(3px 5px 2px rgb(0 0 0 / 0.4));
+}
+.r6o-editor {
+    width: 450px !important;
+}
+
+.r6o-editor-inner {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+}
+.r6o-editor .r6o-footer {
+    width: 100%;
+}
+
+.widget {
+    border-radius: 5px;
+    padding: 5px 20px;
+    margin-bottom: 0px;
+    min-height: unset;
+    display: block;
+    font-size: 13px;
+    flex: 1 1 200px;
+}
+</style>
+
+
+<!-- CSS stylesheet -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@recogito/annotorious@2.7.10/dist/annotorious.min.css">
+
+<!-- JS -->
+<script src="https://cdn.jsdelivr.net/npm/@recogito/annotorious@2.7.10/dist/annotorious.min.js"></script>
+
+<div class="d-flex row" style="width: 100%;margin:10px 0px;">
+    <div class="col-lg-6 col-md-6 col-sm-12">
+        <div>
+            <label>Commodity (User) :</label>
+            {% for annotation in user_annotations %}
+                {{ annotation }}
+            {% empty %}
+                -
+            {% endfor %}
+        </div>
+        <div>
+            <label>Images :</label>
+            <div class="img-scroll full-width" style="min-height:280px; max-height: 280px;">
+                <div class="lightgallery custom-flex al-center fl-direction-column">
+                    {% for b in query.plantqueryimages.all %}
+                        <a href="{{ b.image.url }}" class="m-b-lg" alt="{{b.id}}">
+                            <img src="{{ b.get_image_300_x_300_url }}" alt="{{b.id}}" class="reply-img">
+                        </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        <div class="row m-t-lg" id="atags">
+            <div class="col-lg-12">
+                <div id="save-all-tags">
+                    <span id="saving_tags_t" class="text-info" style="display: none"><i class="fa fa-spinner fa-spin"></i> Saving</span>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="form-group">
+                    <label class="font-bold">Crop</label>
+                    <select name="crop" data-placeholder="Select" class="chosen-select query_tags" multiple>
+                        {#                        {% for crop in crops %}#}
+                        {#                            <option value="{{ crop.name|lower }}">{{ crop.name|capfirst }}</option>#}
+                        {#                        {% endfor %}#}
+                        <option value="not relevant">Not Relevant</option>
+                        <optgroup label="Cereals">
+                            {% for c in crops.cereals %}
+                                <option value="{{ c.0|lower }}">{{ c.1|capfirst }}</option>
+                            {% endfor %}
+                        </optgroup>
+                        <optgroup label="Fruits">
+                            {% for c in crops.fruits %}
+                                <option value="{{ c.0|lower }}">{{ c.1|capfirst }}</option>
+                            {% endfor %}
+                        </optgroup>
+                        <optgroup label="Vegetables">
+                            {% for c in crops.vegetables %}
+                                <option value="{{ c.0|lower }}">{{ c.1|capfirst }}</option>
+                            {% endfor %}
+                        </optgroup>
+                        <optgroup label="Spices">
+                            {% for c in crops.spices %}
+                                <option value="{{ c.0|lower }}">{{ c.1|capfirst }}</option>
+                            {% endfor %}
+                        </optgroup>
+                        <optgroup label="Lentils or Oilseeds">
+                            {% for c in crops.lentils %}
+                                <option value="{{ c.0|lower }}">{{ c.1|capfirst }}</option>
+                            {% endfor %}
+                        </optgroup>
+                        <optgroup label="Industrial Crops">
+                            {% for c in crops.industrial %}
+                                <option value="{{ c.0|lower }}">{{ c.1|capfirst }}</option>
+                            {% endfor %}
+                        </optgroup>
+                        <optgroup label="Others">
+                            <option value="other">Other</option>
+                        </optgroup>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="font-bold">Livestock</label>
+                    <select name="livestock" data-placeholder="Select" class="chosen-select query_tags" multiple>
+                        {% for c in livestocks %}
+                            <option value="{{ c.0|lower }}">{{ c.1|capfirst }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div id="tag-error-msg">
+                    <span class="text-danger"></span>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="form-group">
+                    <label class="font-bold">Type of Problem</label>
+                    <!--
+                    <select name="type_of_problem" data-placeholder="Select" class="chosen-select" multiple>
+                        {% for type in type_of_problems %}
+                            <option value="{{ type.0|lower }}">{{ type.1|capfirst }}</option>
+                        {% endfor %}
+                    </select>
+                    -->
+                    <select class="form-control query_tags" name="problem" data-placeholder="Select">
+                        <option value="" selected>Select</option>
+                        {% for type in type_of_problems %}
+                            <option value="{{ type.0|lower }}">{{ type.1|capfirst }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="font-bold">Diagnosis</label>
+                    <input class="form-control query_tags" type="text" name="diagnosis"></input>
+                </div>
+                <div class="form-group">
+                    <input class="btn btn-primary btn-sm relevance" type="checkbox" name="is_relevant" value="{{query.is_relevant}}" {% if query.is_relevant %}checked{% endif %}>Is Relevant <br> <br>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6 col-md-6 col-sm-12">
+        <div class="ans-reply-wrapper full-height" id="ans-reply-description">
+            <div class="description-reply-wrapper" style="max-height: 330px; min-height:330px;overflow: auto; margin-bottom:25px;padding-right: 10px;">
+                <div class="reply-flex m-l-30-px" style="display: flex; align-items: center;">
+                    {% if query.user.userinfo.photo %}
+                        <img src="{{ query.get_user_image_thumbnail_url }}" class="rounded-circle img-sm">
+                    {% else %}
+                        <img src="{{ default_user_img }}" class="rounded-circle img-sm">
+                    {% endif %}
+                    <div class="full-width d-flex m-l-sm" style="justify-content: space-between">
+                        <div>
+                            <a href="{{ query.user.userinfo.get_absolute_url }}">
+                                <h3 style="margin-bottom: 0px;;" class="text-capitalize">{{ query.user.userinfo.full_name }}</h3>
+                            </a>
+                            <p>
+                                {% with query.user.userinfo.get_full_location as location %}
+                                    {% if location %}
+                                        {{ location }} </br>
+                                    {% endif %}
+                                {% endwith %}
+                                <i style="font-size: smaller;">{{ query.date_uploaded|date:"d M Y" }}</i>
+                            </p>
+                        </div>
+                        <div class="d-flex" style="justify-content: flex-end">
+                            {% if request.user.is_superuser or request.user.project.is_geokrishi %}
+                                <div style="margin-right: 2px">
+                                    <button onclick="showForwardToExperts({{ query.pk }})" class="btn btn-info btn-sm">
+                                        <i class="fa fa-mail-forward"></i> Forward
+                                    </button>
+                                </div>
+                            {% endif %}
+
+                            <!--
+                            <div>
+                                <button class="btn btn-info btn-sm float-right" onclick="showAddTags({{ query.pk }})">
+                                    <i class="fa fa-plus"></i> Tags
+                                </button>
+                            </div>
+                            -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="m-l-30-px m-t-sm">
+                    <label style="color: #009432;">Description</label>
+                    <p>
+                        {% if query.title %}
+                        {{ query.title|default_if_none:'' }}<br>
+                        {% endif %}
+                        {{ query.description }}
+                        {% if not query.audio and not query.description %}<br>
+                            No description
+                        {% endif %}
+                        {% if query.audio %}
+                            <audio controls loop>
+                                <source src="{{query.audio.url}}">
+                                {% comment %} <p>Your browser doesn't support HTML5 audio. Here is
+                                    a <a href="{{query.audio.url}}" target="_blank">link to the audio</a> instead.</p> {% endcomment %}
+                            </audio><br>
+                        {% endif %}
+                    </p>
+                </div>
+
+                <div class="reply-div" style="padding-left:35px;">
+                    <div id="div_answer_{{ query.id }}">
+                        {% recursetree answers %}
+                            {% with ans=node %}
+                                <div id="div_answer_thread_{{ ans.id }}" class="comment-background">
+                                    <div>
+                                        <div class="reply-flex" style="display: flex;align-items: center;">
+                                            {% with is_geokrishi=ans.user.project.is_geokrishi %}
+                                                <img src="{{ ans.user_img }}" class="img-circle img-sm">
+
+                                                <div class="reply-info" style="width: 100%; display: flex; justify-content: space-between;padding-left: 8px;">
+                                                    <h4 style="margin: 0px;" class="text-capitalize">
+                                                        {{ ans.user_name }}
+                                                    </h4>
+                                                    <p style="margin: 0px">
+                                                        <i style="font-size: smaller;">{{ ans.created_on|date:"d M Y" }}</i>
+                                                    </p>
+                                                </div>
+                                            {% endwith %}
+                                        </div>
+                                        <div style="margin-left: 40px;">
+                                            <p id="answer_{{ ans.id }}">
+                                                {{ ans.answer|urlize }}
+                                            </p>
+                                            <div style="display: none" id="save_edited_div_{{ ans.id }}">
+                                                <span class="text-success font-normal cursor-pointer saveEditedAnswer" onclick="onSaveEditedAnswer(this)" style="margin-right: 10px;" answerId="{{ ans.id }}">Save</span>
+                                                <span class="text-danger font-normal cursor-pointer cancelEditAnswer" onclick="onCancelEditAnswer(this)" style="margin-right: 10px;" answerId="{{ ans.id }}">Cancel</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="reply-btn-wrapper" id="reply-btn-wrapper-{{ ans.id }}">
+                                        <a class="replyBtn" onclick="handleReply(this)">Reply</a>
+                                        {% if ans.user and ans.user == request.user %}
+                                            <span class="text-success font-normal cursor-pointer edit-answer" answerId="{{ ans.id }}" onclick="onEditAnswerClick(this)">Edit</span>
+                                        {% endif %}
+                                        {% if not ans.user and request.user.project.is_geokrishi %}
+                                            <span class="text-success font-normal cursor-pointer edit-answer" answerId="{{ ans.id }}" onclick="onEditAnswerClick(this)">Edit</span>
+                                        {% endif %}
+                                        <div class="reply-form" id="div_form_{{ ans.id }}">
+                                            {#                                                                                                                                                <i class="fa fa-user-circle-o" style="font-size: xx-large; padding-right: 10px;"></i>#}
+
+                                            {% if request.user.userinfo.photo %}
+                                                <img src="{{ request.user.userinfo.get_photo_thumbnail_url }}" class="img-circle img-sm">
+                                            {% else %}
+                                                <img src="{{ default_user_img }}" class="img-circle img-sm">
+                                            {% endif %}
+
+                                            <div style="padding-left: 8px">
+                                                <form action="#" onsubmit="submit_form(this); return false;">
+                                                    <label style="color: #009432;">Answer</label><br>
+                                                    <textarea class="form-control child_reply_ans m-b-sm" rows="4" cols="45" root_id="{{ ans.id }}" query_id={{ query.id }} parent_id={{ ans.id }} name="answer" id="child_reply_ans_{{ ans.id }}" required></textarea>
+                                                    <button type="submit" class="btn btn-primary btn-sm" class="buttonload" id="btn-submit-answer-child-{{ ans.id }}">
+                                                        <span id="submit_ans_child_t_{{ ans.id }}">Submit</span>
+                                                        <span id="submitting_ans_child_t_{{ ans.id }}" style="display: none"><i class="fa fa-spinner fa-spin"></i> Submitting</span>
+                                                    </button>
+                                                    <button class="btn btn-danger btn-sm" type="button" onclick="handleReplyCancel(this)" answerId="{{ ans.id }}">Cancel</button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <ul class="children">
+                                    {% if not ans.is_leaf_node %}
+                                        <div> {{ children }}</div>
+                                    {% endif %}
+                                </ul>
+                            {% endwith %}
+                        {% endrecursetree %}
+                    </div>
+                </div>
+            </div>
+
+            <div style="padding-left:35px;">
+                <div style="display: flex;" style="width:80%">
+                    {#                                                                            <i class="fa fa-user-circle-o" style="font-size: xx-large; padding-right: 10px;"></i>#}
+                    {% if request.user.userinfo.photo %}
+                        <img src="{{ request.user.userinfo.get_photo_thumbnail_url }}" class="img-circle img-sm">
+                    {% else %}
+                        <img src="{{ default_user_img }}" class="img-circle img-sm">
+                    {% endif %}
+                    <div class="reply-field" style="padding-left: 8px;">
+                        <form action="#" onsubmit="submit_answer_form(this); return false;">
+                            <label style="color: #009432;">Answer</label><br>
+                            <textarea class="form-control" id="text-reply" rows="4" root_id="{{ query.id }}" query_id="{{ query.id }}" name="answer" required></textarea><br>
+                            <button type="submit" class="btn btn-primary btn-sm" class="buttonload" id="btn-submit-answer">
+                                <span id="submit_ans_t">Submit</span>
+                                <span id="submitting_ans_t" style="display: none"><i class="fa fa-spinner fa-spin"></i> Submitting</span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!--
+        <div class="full-height" id="add-tags-section" style="display: none">
+            <h3>
+                <i class="fa fa-tags"></i> Tags
+                <i class="fa fa-spinner fa-spin" id="loading-tag-modal-body"></i>
+            </h3>
+            <div>
+                <form id="addTagsForm" action="#" onsubmit="on_save_tags(this); return false;">
+                    <input name="query_id" value="{{ query.pk }}" hidden>
+                    <div class="form-group">
+                        <label class="font-bold">Livestock</label>
+                        <select name="tag_livestock" data-placeholder="Select" class="chosen-select" multiple>
+                            {% for livestock in livestocks %}
+                                <option value="{{ livestock.name|lower }}">{{ livestock.name|capfirst }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="font-bold">Crop</label>
+                        <select name="tag_crop" data-placeholder="Select" class="chosen-select" multiple>
+                            {% for crop in crops %}
+                                <option value="{{ crop.name|lower }}">{{ crop.name|capfirst }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="font-bold">Type of Problem</label>
+                        <select name="tag_type_of_problem" data-placeholder="Select" class="chosen-select" multiple>
+                            {% for type in type_of_problems %}
+                                <option value="{{ type.0|lower }}">{{ type.1|capfirst }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-info btn-sm" class="buttonload" id="btn-send-tags">
+                        <span id="send_tags_t">Save</span>
+                        <span id="sending_tags_t" style="display: none"><i class="fa fa-spinner fa-spin"></i> Saving</span>
+                    </button>
+                    <button type="button" class="btn btn-danger btn-sm" onclick="showQueryDetail()">Close</button>
+                    <br/>
+                    <span id="tags-message"></span>
+                </form>
+            </div>
+        </div>
+        -->
+
+        <div class="full-height" id="forward-to-experts" style="display: none;">
+            <h3><i class="fa fa-mail-forward"></i> Forward</h3>
+            <form id="forwardToExpertsForm" action="#" onsubmit="on_forward_to_experts(this); return false;">
+                <input name="query_id" value="{{ query.pk }}" hidden>
+                <div class="form-group">
+                    <label class="font-bold">Select Experts</label>
+                    <select name="selected_experts" data-placeholder="Select" class="chosen-select" multiple style="width:350px;" tabindex="4">
+                        {% for expert in experts %}
+                            <option value="{{ expert.pk }}">{{ expert.full_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <button type="submit" class="btn btn-info btn-sm" class="buttonload" id="btn-send-fte">
+                    <span id="send_t">Send</span>
+                    <span id="sending_t" style="display: none"><i class="fa fa-spinner fa-spin"></i> Sending</span>
+                </button>
+                <button type="button" class="btn btn-danger btn-sm" onclick="showQueryDetail()">Close</button>
+                <br/>
+                <span id="fte-message"></span>
+
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    var default_user_image = '{{ default_user_img }}';
+
+
+    var createLabel = (labelName, labelFor) =>{
+        var parentDiv = document.createElement('div')
+        //parentDiv.style = 'width: 30%; text-align: left;'
+        parentDiv.style = 'text-align: left;'
+
+        var label = document.createElement('label');
+        label.innerHTML = labelName
+        label.className = 'm-r-sm'
+        label.htmlFor = labelFor
+
+        parentDiv.appendChild(label)
+        return parentDiv
+    }
+
+
+
+    var createSelect = (id, options, changeListener, currentValue) => {
+        const createOptions = (options) => {
+            let html$ = '<option value="">Select</option>';
+            for(const option of options){
+                if(currentValue == option){
+                    html$ += '<option value="'+option+'" selected>'+option+'</option>';
+                }
+                else{
+                    html$ += '<option value="'+option+'">'+option+'</option>';
+                }
+            }
+            return html$;
+        }
+
+        var parentDiv = document.createElement('div')
+        //parentDiv.style = 'width: 70%;'
+
+        var select = document.createElement('select');
+        select.id = id;
+        select.className = 'form-control';
+        select.style = 'width: 100%;'
+        select.addEventListener('change', changeListener);
+        let html$ = '';
+        html$ = createOptions(options);
+        select.innerHTML = html$;
+
+        parentDiv.appendChild(select)
+        return parentDiv
+    }
+
+
+    var createInput = (id, changeListener, currentValue) => {
+        var parentDiv = document.createElement('div')
+        // parentDiv.style = 'width: 70%;'
+
+        var input = document.createElement('input');
+        input.id = id;
+        input.className = 'form-control';
+        input.style = 'width: 100%;'
+        input.addEventListener('change', changeListener);
+        input.value = currentValue;
+
+        parentDiv.appendChild(input)
+        return parentDiv
+    }
+
+    var BodyPartSelectorWidget = function(args) {
+
+        // 1. Find a current color setting in the annotation, if any
+        var currentBodyPart = args.annotation ?
+            args.annotation.bodies.find(function(b) {
+                return b.purpose == 'bodyPart';
+            }) : null;
+
+        // 2. Keep the value in a variable
+        var currentBodyPartValue = currentBodyPart ? currentBodyPart.value : null;
+
+        // 3. Triggers callbacks on user action
+        var addTag = function(evt) {
+            if (currentBodyPart) {
+                args.onUpdateBody(currentBodyPart, {
+                    type: 'TextualBody',
+                    purpose: 'bodyPart',
+                    value: evt.target.value
+                });
+            } else {
+                args.onAppendBody({
+                    type: 'TextualBody',
+                    purpose: 'bodyPart',
+                    value: evt.target.value
+                });
+            }
+            currentBodyPartValue = evt.target.value;
+        }
+
+        var container = document.createElement('div');
+        //container.className = 'd-flex';
+        container.appendChild(createLabel('Body Part', 'bodyPartSelect'));
+        container.appendChild(createSelect(
+                'bodyPartSelect',
+                {{ image_annotation_tags|safe }},
+                addTag,
+                currentBodyPartValue
+            )
+        );
+        return container;
+    }
+
+    var DiseaseWidget = function(args) {
+        // 1. Find a current color setting in the annotation, if any
+        var currentDisease = args.annotation ?
+            args.annotation.bodies.find(function(b) {
+                return b.purpose == 'disease';
+            }) : null;
+
+        // 2. Keep the value in a variable
+        var currentDiseaseValue = currentDisease ? currentDisease.value : null;
+
+        // 3. Triggers callbacks on user action
+        var addDiseaseName = function(evt) {
+            if (currentDisease) {
+                args.onUpdateBody(currentDisease, {
+                    type: 'TextualBody',
+                    purpose: 'disease',
+                    value: evt.target.value
+                });
+            } else {
+                args.onAppendBody({
+                    type: 'TextualBody',
+                    purpose: 'disease',
+                    value: evt.target.value
+                });
+            }
+            currentDiseaseValue = evt.target.value;
+        }
+
+        var container = document.createElement('div');
+        //container.className = 'd-flex';
+        container.appendChild(createLabel('Disease', 'diseaseInput'));
+        // container.appendChild(createInput('diseaseInput', addDiseaseName, currentDiseaseValue));
+        container.appendChild(createSelect(
+                'diseaseInput',
+                [
+                    'Bacterial Spot',
+                    'Early Blight',
+                    'Healthy',
+                    'Late Blight',
+                    'Leaf Mold',
+                    'Mosaic Virus',
+                    'Septoria Leaf Spot',
+                    'Spider Mites',
+                    'Target Spot',
+                    'Yellow Leaf Curl Virus',
+                    'Damping Off',
+                ],
+                addDiseaseName,
+                currentDiseaseValue
+            )
+        );
+        return container;
+    }
+
+
+
+    var DiseaseStageWidget = function(args) {
+        // 1. Find a current color setting in the annotation, if any
+        var currentDiseaseStage = args.annotation ?
+            args.annotation.bodies.find(function(b) {
+                return b.purpose == 'diseaseStage';
+            }) : null;
+
+        // 2. Keep the value in a variable
+        var currentDiseaseStageValue = currentDiseaseStage ? currentDiseaseStage.value : null;
+
+
+        // 3. Triggers callbacks on user action
+        var addDiseaseStage = function(evt) {
+            if (currentDiseaseStage) {
+                args.onUpdateBody(currentDiseaseStage, {
+                    type: 'TextualBody',
+                    purpose: 'diseaseStage',
+                    value: evt.target.value
+                });
+            } else {
+                args.onAppendBody({
+                    type: 'TextualBody',
+                    purpose: 'diseaseStage',
+                    value: evt.target.value
+                });
+            }
+            currentDiseaseStageValue = evt.target.value;
+        }
+
+
+        var container = document.createElement('div');
+        //container.className = 'd-flex';
+        container.appendChild(createLabel('Disease Stage', 'diseaseStageSelect'));
+        container.appendChild(createSelect(
+                'diseaseStageSelect',
+                ['Early', 'Mid', 'Late'],
+                addDiseaseStage,
+                currentDiseaseStageValue
+            )
+        );
+        return container;
+    }
+
+
+
+    var DiseaseSeverityWidget = function(args) {
+        // 1. Find a current color setting in the annotation, if any
+        var currentData = args.annotation ?
+            args.annotation.bodies.find(function(b) {
+                return b.purpose == 'diseaseSeverity';
+            }) : null;
+
+        // 2. Keep the value in a variable
+        var currentDataValue = currentData ? currentData.value : null;
+
+
+        // 3. Triggers callbacks on user action
+        var addData = function(evt) {
+            if (currentData) {
+                args.onUpdateBody(currentData, {
+                    type: 'TextualBody',
+                    purpose: 'diseaseSeverity',
+                    value: evt.target.value
+                });
+            } else {
+                args.onAppendBody({
+                    type: 'TextualBody',
+                    purpose: 'diseaseSeverity',
+                    value: evt.target.value
+                });
+            }
+            currentDataValue = evt.target.value;
+        }
+
+
+        var container = document.createElement('div');
+        //container.className = 'd-flex';
+        container.appendChild(createLabel('Disease Severity', 'diseaseSeveritySelect'));
+        container.appendChild(createSelect(
+                'diseaseSeveritySelect',
+                ['High', 'Medium', 'Low'],
+                addData,
+                currentDataValue
+            )
+        );
+        return container;
+    }
+
+
+
+    var CausalOrganismWidget = function(args) {
+        // 1. Find a current color setting in the annotation, if any
+        var causalOrganism = args.annotation ?
+            args.annotation.bodies.find(function(b) {
+                return b.purpose == 'causalOrganism';
+            }) : null;
+
+        // 2. Keep the value in a variable
+        var causalOrganismValue = causalOrganism ? causalOrganism.value : null;
+
+
+        // 3. Triggers callbacks on user action
+        var addCausalOrganism = function(evt) {
+            if (causalOrganism) {
+                args.onUpdateBody(causalOrganism, {
+                    type: 'TextualBody',
+                    purpose: 'causalOrganism',
+                    value: evt.target.value
+                });
+            } else {
+                args.onAppendBody({
+                    type: 'TextualBody',
+                    purpose: 'causalOrganism',
+                    value: evt.target.value
+                });
+            }
+            causalOrganismValue = evt.target.value;
+        }
+
+
+        var container = document.createElement('div');
+        //container.className = 'd-flex';
+        container.appendChild(createLabel('Causal Organism', 'causalOrganismSelect'));
+        container.appendChild(createSelect(
+                'causalOrganismSelect',
+                [
+                    'Bacteria',
+                    'Virus',
+                    'Fungus',
+                    'Mycoplasma',
+                    'Nematode',
+                ],
+                addCausalOrganism,
+                causalOrganismValue
+            )
+        );
+        return container;
+    }
+
+    var PestWidget = function(args) {
+        // 1. Find a current color setting in the annotation, if any
+        var pest = args.annotation ?
+            args.annotation.bodies.find(function(b) {
+                return b.purpose == 'pest';
+            }) : null;
+
+        // 2. Keep the value in a variable
+        var pestValue = pest ? pest.value : null;
+
+
+        // 3. Triggers callbacks on user action
+        var addPest = function(evt) {
+            if (pest) {
+                args.onUpdateBody(pest, {
+                    type: 'TextualBody',
+                    purpose: 'pest',
+                    value: evt.target.value
+                });
+            } else {
+                args.onAppendBody({
+                    type: 'TextualBody',
+                    purpose: 'pest',
+                    value: evt.target.value
+                });
+            }
+            pestValue = evt.target.value;
+        }
+
+
+        var container = document.createElement('div');
+        //container.className = 'd-flex';
+        container.appendChild(createLabel('Pest', 'pestSelect'));
+        container.appendChild(createSelect(
+                'pestSelect',
+                [
+                    'Leaf Minor',
+                    'Fusarium Wilt',
+                    'Bacterial Wilt',
+                    'Rootknot Nematode',
+                    'Helicoverpa Armigera',
+                    'Bemisia Tabaci',
+                    'Tomato Fruit Borer',
+                ],
+                addPest,
+                pestValue
+            )
+        );
+        return container;
+    }
+
+    var NutrientDeficiencyWidget = function(args) {
+        // 1. Find a current color setting in the annotation, if any
+        var nutrientDeficiency = args.annotation ?
+            args.annotation.bodies.find(function(b) {
+                return b.purpose == 'nutrientDeficiency';
+            }) : null;
+
+        // 2. Keep the value in a variable
+        var nutrientDeficiencyValue = nutrientDeficiency ? nutrientDeficiency.value : null;
+
+
+        // 3. Triggers callbacks on user action
+        var addNutrientDeficiency = function(evt) {
+            if (nutrientDeficiency) {
+                args.onUpdateBody(nutrientDeficiency, {
+                    type: 'TextualBody',
+                    purpose: 'nutrientDeficiency',
+                    value: evt.target.value
+                });
+            } else {
+                args.onAppendBody({
+                    type: 'TextualBody',
+                    purpose: 'nutrientDeficiency',
+                    value: evt.target.value
+                });
+            }
+            nutrientDeficiencyValue = evt.target.value;
+        }
+
+
+        var container = document.createElement('div');
+        //container.className = 'd-flex';
+        container.appendChild(createLabel('Nutrient Deficiency', 'nutrientDeficiencySelect'));
+        container.appendChild(createSelect(
+                'nutrientDeficiencySelect',
+                ['Nitrogen', 'Phosphorous', 'Potassium', 'Magnesium', 'Sulfur', 'Manganese', 'Molybdenum',
+                'Zinc', 'Boron', 'Calcium', 'Copper', 'Iron'],
+                addNutrientDeficiency,
+                nutrientDeficiencyValue
+            )
+        );
+        return container;
+    }
+
+
+    /** A matching formatter that sets the color according to the 'highlighting' body value **/
+    var CustomFormatter = function(annotation) {
+        var highlightBody = annotation.bodies.find(function(b) {
+            return b.purpose == 'bodyPart';
+        });
+
+        if (highlightBody){
+            return highlightBody.value;
+        }
+    }
+
+    $(document).ready(function () {
+        var $lg = $(".lightgallery")
+        $lg.lightGallery({
+            enableDrag: false,
+            enableSwipe: false,
+            getCaptionFromTitleOrAlt: false,
+        });
+        $lg.on(  
+            'onAfterOpen.lg', async (event) => {
+                // Wait for all the slides in lightgallery to load
+                await new Promise(r => setTimeout(r, 500));
+                for (const image of $('.lg-item .lg-image')) {
+                    let anno = Annotorious.init({
+                        image: image, // image element or ID
+                        widgets: [
+                            BodyPartSelectorWidget,
+                            DiseaseWidget,
+                            DiseaseStageWidget,
+                            DiseaseSeverityWidget,
+                            CausalOrganismWidget,
+                            PestWidget,
+                            NutrientDeficiencyWidget,
+                        ],
+                    }); 
+                    let list_create_url = "{% url 'QueryImageAnnotationListCreate' 0 %}";
+                    list_create_url = list_create_url.replace(0, image.alt);
+                    anno.loadAnnotations(list_create_url);
+                    anno.on('createAnnotation', async (annotation, overrideId) => {
+                        const csrftoken = getCookie('csrftoken');
+                        const option = {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': csrftoken,
+                            },
+                            body: JSON.stringify(annotation)
+                        }; 
+                        var response = await fetch(list_create_url, option);
+                        var j_res = await response.json();
+                        if (response.ok) {
+                            annotation.id = j_res.id;
+                        } else {
+                            alert('Couldn\'nt save annotation.');
+                        }
+                    });
+                     
+                    anno.on('mouseEnterAnnotation', function(annotation, element) {
+                        const tags = annotation.body.filter(x=> x.purpose == 'bodyPart').map(x=> x.value).join(', ');
+                        const rect = element.children[0];
+                        const x = rect.getAttribute('x');
+                        const y = rect.getAttribute('y');
+                        console.log(x.purpose)
+                        if (x && y) {
+                            element.innerHTML += `<text class="annotationTags" x="${x}" y="${y - 25}">${tags}</text>`;
+                        }
+                    });
+                    anno.on('mouseLeaveAnnotation', function(annotation, element) {
+                        const tagTexts = element.getElementsByClassName('annotationTags');
+                        for (const tag of tagTexts) {
+                            element.removeChild(tag);
+                        }
+                    });
+
+                    anno.on('updateAnnotation', async (annotation, previous) => {
+                        let url = `{% url 'QueryImageAnnotationUpdateDelete' 0 %}`;
+                        url = url.replace(0, annotation.id)
+                        const csrftoken = getCookie('csrftoken');
+                        const option = {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': csrftoken,
+                            },
+                            body: JSON.stringify(annotation)
+                        };
+                        var response = await fetch(url, option);
+                        var j_res = await response.json();
+                        if (response.ok) {
+                            annotation.id = j_res.id;
+                        } else {
+                            alert('Couldn\'nt update annotation.');
+                        }
+                    });  
+                    anno.on('deleteAnnotation', async (annotation) => {
+                        let url = `{% url 'QueryImageAnnotationUpdateDelete' 0 %}`;
+                        url = url.replace(0, annotation.id);
+                        const csrftoken = getCookie('csrftoken');
+                        const option = {
+                            method: 'DELETE',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': csrftoken,
+                            },
+                            body: JSON.stringify(annotation)
+                        };
+                        var response = await fetch(url, option);
+                        var j_res = await response.json();
+                        if (response.ok) {
+                            // pass
+                            console.log("Deleted")
+                        } else {
+                            alert('Couldn\'nt delete annotation.');
+                        }
+                    });
+                }
+            }
+        )
+
+        $('.chosen-select').chosen({width: "100%"});
+
+        var tags = {
+            'livestocks':{{ s_livestocks|safe }},
+            'crops':{{ s_crops|safe }},
+            'type_of_problems':{{ s_type_of_problems|safe }},
+            'problem': '{% if s_problem %}{{ s_problem.type_of_problem }}{% else %}{% endif %}',
+            'diagnosis': '{% if s_problem %}{{ s_problem.diagnosis }}{% else %}{% endif %}'
+        }
+        set_query_tags(tags);
+
+        $('.summernote').summernote({
+            height: 150,
+            dialogsInBody: true,
+        });
+
+
+
+
+
+    });
+
+    async function submit(data) {
+        /** Submit answer for the crop health.*/
+
+        var csrftoken = getCookie('csrftoken');
+        const option = {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken,
+            },
+            body: JSON.stringify(data)
+        };
+        var response = await fetch("{% url 'submit_query_answer' %}", option);
+        var j_res = await response.json();
+        if (response.ok) {
+            // Change the modal display.
+            //console.log(j_res, data['query_id'], data['answer']);
+
+            let html = ''
+            html += `<div id="div_answer_thread_${j_res['id']}" class="comment-background">`
+            html += '<div>'
+            html += `<div class="reply=flex" style="display: flex;align-items: center;">`
+
+            if (j_res['user_image']) {
+                html += `<img src=${j_res['user_image']} class="img-circle img-sm">`
+            } else {
+                html += `<img src=${default_user_image} class="img-circle img-sm">`
+            }
+
+            html += '<div class="reply-info" style="width: 100%; display: flex; justify-content: space-between;padding-left: 8px;">'
+            html += `<h4 style="margin-bottom: 0px;" class="text-capitalize">${j_res['user']}</h4>`
+            html += `<p><i style="font-size: smaller;">${j_res['created_on']}</i></p>`
+            html += `</div>`
+            html += `</div>`
+            html += `<div style="margin-left: 40px;">`
+            html += `<p id="answer_${j_res['id']}">${j_res['answer']}</p>`
+            html += `<div style="display: none" id="save_edited_div_${j_res['id']}">`
+            html += `<span class="text-success font-normal cursor-pointer saveEditedAnswer" onclick="onSaveEditedAnswer(this)" style="margin-right: 10px;" answerId="${j_res['id']}">Save</span>`
+            html += `<span class="text-danger font-normal cursor-pointer cancelEditAnswer"  onclick="onCancelEditAnswer(this)" style="margin-right: 10px;" answerId="${j_res['id']}">Cancel</span>`
+            html += `</div>`
+            html += `</div>`
+            html += `</div>`
+
+
+            html += `<div class="reply-btn-wrapper" id="reply-btn-wrapper-${j_res['id']}">
+						<a class="replyBtn" onclick="handleReply(this)">Reply</a>
+                        <span class="text-success font-normal cursor-pointer edit-answer" answerId="${j_res['id']}" onclick="onEditAnswerClick(this)">Edit</span>
+						<div class="reply-form" id="div_form_${j_res['id']}">
+						<img src=${default_user_image} class="img-circle img-sm">
+						<div style="padding-left: 8px;">
+						<form action="#"  onsubmit="submit_form(this); return false;" >
+						<label style="color: #009432;">Answer</label><br>
+						<textarea class="form-control" rows="4" cols="45" root_id="${j_res['id']}" query_id=${j_res['query_id']} parent_id=${j_res['id']} name="answer" id="child_reply_ans_${j_res['id']}" required></textarea><br>
+                        <button type="submit" class="btn btn-primary btn-sm" class="buttonload" id="btn-submit-answer-child-${j_res['id']}">
+                        <span id="submit_ans_child_t_${j_res['id']}">Submit</span>
+                        <span id="submitting_ans_child_t_${j_res['id']}" style="display: none"><i class="fa fa-spinner fa-spin"></i> Submitting</span>
+                        </button>
+                        <button class="btn btn-danger btn-sm" type="button" onclick="handleReplyCancel(this)" answerId="${j_res['id']}">Cancel</button>
+						</form>
+						</div>
+						</div>
+						</div>`;
+
+            html += `</div>`
+            let new_add = html;
+
+            {#$('#div_answer_' + data['query_id']).css('display', 'block');#}
+            if (data['parent_id'] === undefined) {
+                let childrens = $('#div_answer_' + data['query_id']).children();
+                if (childrens.length < 1) {
+                    $('#div_answer_' + data['query_id']).html(new_add);
+                } else {
+                    {#$('#div_form_' + data['root_id']).find('textarea[name="answer"]').val('');#}
+                    $('#div_answer_' + data['query_id']).children().last().after(new_add);
+                }
+
+                document.getElementById('text-reply').value = '';
+                $('#submit_ans_t').show();
+                $('#submitting_ans_t').hide();
+                $('#btn-submit-answer').prop("disabled", false);
+
+            } else {
+                $('#div_form_' + data['root_id']).css('display', 'none');
+                $('#div_form_' + data['root_id']).parent('div.reply-btn-wrapper').find('a.replyBtn').show();
+                $('#div_form_' + data['root_id']).parent('div.reply-btn-wrapper').find('span.edit-answer').show();
+                {#$('#div_answer_' + data['query_id']).css('display', 'block');#}
+                {#$('#answer_' + data['root_id']).text(data['answer']);#}
+
+                $('#div_answer_thread_' + data['root_id']).after(`<ul><div>${new_add}</div></ul>`);
+                $('#remark_' + data['query_id']).find('span').removeClass('btn-warning').addClass('btn-success').empty().append('Replied');
+
+                $(`#child_reply_ans_${data['parent_id']}`).val('');
+
+                $(`#submit_ans_child_t_${data['parent_id']}`).show();
+                $(`#submitting_ans_child_t_${data['parent_id']}`).hide();
+                $(`#btn-submit-answer-child-${data['parent_id']}`).prop("disabled", false);
+            }
+
+            var elmnt = document.getElementById(`div_answer_thread_${j_res['id']}`);
+            elmnt.scrollIntoView();
+            $(`#answer_${j_res['id']}`).urlize();
+
+            $('#tag-error-msg > span').html('')
+        } else {
+            alert('Couldn\'nt submit answer.');
+        }
+    }
+
+    /**
+     async function get_query_tags(query_id) {
+        const option = {
+            method: 'GET',
+        };
+        var url = "{% url 'GetQueryAnnotationsAPIView' queryId=0 %}".replace('/0/', `/${query_id}/`);
+        var response = await fetch(url, option);
+        var j_res = await response.json();
+
+        if (response.ok) {
+            set_query_tags(j_res)
+        } else {
+            console.log('error')
+        }
+    }**/
+
+    /**
+     async function save_tags(query_id, data) {
+        var csrftoken = getCookie('csrftoken');
+        const option = {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken,
+            },
+            body: JSON.stringify(data)
+        };
+        var url = "{% url 'QueryDetailHTMLAPIView' queryId=0 %}".replace('/0/', `/${query_id}/`);
+        var response = await fetch(url, option);
+        if (response.ok) {
+            $('#tags-message').html('Saved Successfully!!').removeClass('text-danger').addClass('text-success')
+        } else {
+            $('#tags-message').html("Couldn't save. Please try again.").removeClass('text-success').addClass('text-danger')
+        }
+        $('#sending_tags_t').hide();
+        $('#send_tags_t').show();
+        $('#btn-send-tags').prop("disabled", false);
+    }**/
+
+    async function forward_to_experts(query_id, data) {
+        var csrftoken = getCookie('csrftoken');
+        const option = {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken,
+            },
+            body: JSON.stringify(data)
+        };
+        var url = "{% url 'ForwardToExpertsAPIView' queryId=0 %}".replace('/0/', `/${query_id}/`);
+        var response = await fetch(url, option);
+        if (response.ok) {
+            $('#fte-message').html('Forwarded successfully!!').removeClass('text-danger').addClass('text-success')
+        } else {
+            $('#fte-message').html("Couldn't forward. Please try again.").removeClass('text-success').addClass('text-danger')
+        }
+
+        $('#sending_t').hide();
+        $('#send_t').show();
+        $('#btn-send-fte').prop("disabled", false);
+    }
+
+    async function submit_query_tags(data) {
+        /** Submit tags of crop health.*/
+        var csrftoken = getCookie('csrftoken');
+        const option = {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken,
+            },
+            body: JSON.stringify(data)
+        };
+        var response = await fetch("{% url 'update_query_tags' %}", option);
+        var j_res = await response.json();
+        if (response.ok) {
+            console.log('Ok');
+            $('#saving_tags_t').hide();
+        } else {
+            console.log('400');
+        }
+
+    }
+
+    $('.relevance').change(function () {
+        var query_id = '{{ query.pk }}'
+        var is_relevant = $('#atags').find('input[name="is_relevant"]').is(":checked");
+
+        var data = {
+            'query_id': query_id,
+            'is_relevant': is_relevant,
+        };
+        console.log(data)
+
+        submit_relevance(data)
+    })
+
+    async function submit_relevance(data) {
+        /** Submit tags of crop health.*/
+        var csrftoken = getCookie('csrftoken');
+        const option = {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken,
+            },
+            body: JSON.stringify(data)
+        };
+        var response = await fetch("{% url 'update_relevance' %}", option);
+        var j_res = await response.json();
+        if (response.ok) {
+            console.log('Ok');
+        } else {
+            console.log('400');
+        }
+
+    }
+    $('.query_tags').change(function () {
+        var query_id = '{{ query.pk }}'
+        var livestocks = $('#atags').find('select[name="livestock"]').chosen().val();
+        var crops = $('#atags').find('select[name="crop"]').chosen().val();
+        var type_of_problems = $('#atags').find('select[name="type_of_problem"]').chosen().val();
+        var problem = $('#atags').find('select[name="problem"]').val();
+        var diagnosis = $('#atags').find('input[name="diagnosis"]').val();
+
+        var data = {
+            'query_id': query_id,
+            'livestocks': livestocks,
+            'crops': crops,
+            'type_of_problems': type_of_problems,
+            'problem': problem,
+            'diagnosis': diagnosis,
+        };
+
+        $('#saving_tags_t').show();
+        submit_query_tags(data)
+    })
+
+    function submit_form(el) {
+        /** On submit button click for crop health.*/
+        var answer = $(el).find('textarea[name="answer"]').val();
+        var query_id = $(el).find('textarea[name="answer"]').attr('query_id');
+        var parent_id = $(el).find('textarea[name="answer"]').attr('parent_id');
+        var root_id = $(el).find('textarea[name="answer"]').attr('root_id');
+
+        var data = {
+            'root_id': root_id,
+            'query_id': query_id,
+            'answer': answer,
+        };
+
+        if (parent_id !== undefined) {
+            data['parent_id'] = parent_id
+
+            $(`#submit_ans_child_t_${parent_id}`).hide();
+            $(`#submitting_ans_child_t_${parent_id}`).show();
+            $(`#btn-submit-answer-child-${parent_id}`).prop("disabled", true);
+        }
+        submit(data);
+    }
+
+    function submit_answer_form(el) {
+        var livestocks = $('#atags').find('select[name="livestock"]').chosen().val();
+        var crops = $('#atags').find('select[name="crop"]').chosen().val();
+
+        if (livestocks.length < 1 && crops.length < 1) {
+            $('#tag-error-msg > span').html('Please select either livestock or crop.')
+            return;
+        }
+
+        $('#submit_ans_t').hide();
+        $('#submitting_ans_t').show();
+        $('#btn-submit-answer').prop("disabled", true);
+
+        submit_form(el);
+
+    }
+
+    function handleReply(el) {
+        $(el).parent('div.reply-btn-wrapper').find('div.reply-form').css('display', 'flex')
+        $(el).parent('div.reply-btn-wrapper').find('span.edit-answer').hide();
+        {#el.nextElementSibling.style.display = "flex";#}
+        el.style.display = "none";
+    }
+
+    function handleReplyCancel(el) {
+        var id = $(el).attr('answerId')
+        $(el).closest('div.reply-btn-wrapper').find('div.reply-form').css('display', 'none')
+        $(el).closest('div.reply-btn-wrapper').find('span.edit-answer').show();
+        $(el).closest('div.reply-btn-wrapper').find('.replyBtn').show();
+        $(`#child_reply_ans_${id}`).val('');
+    }
+
+    function onEditAnswerClick(el) {
+        var ansId = $(el).attr('answerId');
+        var value = $(`#answer_${ansId}`).text();
+        value = value.trim();
+
+        $(el).parent('div.reply-btn-wrapper').hide();
+        $(`#answer_${ansId}`).html(`<input class="form-control" name="edited_answer_${ansId}" value="${value}">`);
+        $(`#save_edited_div_${ansId}`).show();
+        $(`#save_edited_div_${ansId}`).append(`<p id="old_ans_${ansId}" style="display: none">${value}</p>`)
+    }
+
+    async function saveEditedAnswer(ansId, data) {
+        /** Submit edited answer for the crop health. */
+
+        var csrftoken = getCookie('csrftoken');
+        const option = {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken,
+            },
+            body: JSON.stringify(data)
+        };
+        var response = await fetch("{% url 'update_query_answer' %}", option);
+        var j_res = await response.json();
+        if (response.ok) {
+            $(`#reply-btn-wrapper-${ansId}`).show();
+            $(`#answer_${ansId}`).html(data['answer']);
+            $(`#save_edited_div_${ansId}`).hide();
+            $(`#answer_${ansId}`).urlize();
+        } else {
+            console.log("Couldn't update answer.")
+        }
+    }
+
+    function onSaveEditedAnswer(el) {
+        var id = $(el).attr('answerId');
+        var answer = $(`input[name=edited_answer_${id}]`).val();
+        var data = {
+            'id': id,
+            'answer': answer
+        }
+        saveEditedAnswer(id, data)
+    }
+
+    function onCancelEditAnswer(el) {
+        var id = $(el).attr('answerId');
+        $(`#reply-btn-wrapper-${id}`).show();
+        var old_answer = $(`#old_ans_${id}`).text();
+        $(`#answer_${id}`).html(old_answer);
+        $(`#answer_${id}`).urlize();
+        $(`#save_edited_div_${id}`).hide();
+    }
+
+    function set_query_tags(data) {
+        /**
+         var el = '#addTagsForm'
+         $(el).find('select[name="tag_livestock"]').chosen().val(data['livestocks']);
+         $(el).find('select[name="tag_crop"]').chosen().val(data['crops']);
+         $(el).find('select[name="tag_type_of_problem"]').chosen().val(data['type_of_problems']);
+         **/
+
+        $('#atags').find('select[name="livestock"]').chosen().val(data['livestocks']);
+        $('#atags').find('select[name="crop"]').chosen().val(data['crops']);
+        $('#atags').find('select[name="type_of_problem"]').chosen().val(data['type_of_problems']);
+        $('#atags').find('select[name="problem"]').val(data['problem']);
+        $('#atags').find('input[name="diagnosis"]').val(data['diagnosis']);
+
+        $('.chosen-select').trigger("chosen:updated");
+        $('#loading-tag-modal-body').hide();
+    }
+
+    /**
+     function showAddTags(query_id) {
+        $('#loading-tag-modal-body').show()
+        $('#add-tags-section').show();
+        $('#ans-reply-description').hide();
+        $('#forward-to-experts').hide();
+
+        get_query_tags(query_id)
+    }**/
+
+    function showQueryDetail() {
+        $('#add-tags-section').hide();
+        $('#forward-to-experts').hide();
+        $('#ans-reply-description').show();
+        $('#tags-message').empty()
+        $('#fte-message').empty()
+    }
+
+    function showForwardToExperts(queryId) {
+        $('#add-tags-section').hide();
+        $('#forward-to-experts').show();
+        $('#ans-reply-description').hide();
+    }
+
+    /**
+     function on_save_tags(el) {
+        $(el).validate();
+        var query_id = $(el).find('input[name=query_id]').val()
+        var tag_livestocks = $(el).find('select[name="tag_livestock"]').chosen().val();
+        var tag_crops = $(el).find('select[name="tag_crop"]').chosen().val();
+        var tag_type_of_problems = $(el).find('select[name="tag_type_of_problem"]').chosen().val();
+
+        var data = {
+            'query_id': query_id,
+            'livestocks': tag_livestocks,
+            'crops': tag_crops,
+            'type_of_problems': tag_type_of_problems,
+        };
+
+        $('#tags-message').empty();
+        $('#sending_tags_t').show();
+        $('#send_tags_t').hide();
+        $('#btn-send-tags').prop("disabled", true);
+
+        save_tags(query_id, data);
+    }**/
+
+    function on_forward_to_experts(el) {
+        $(el).validate();
+        var query_id = $(el).find('input[name=query_id]').val()
+        var selected_experts = $(el).find('select[name="selected_experts"]').chosen().val();
+
+        var data = {
+            'query_id': query_id,
+            'experts_id': selected_experts
+        };
+
+        $('#fte-message').empty();
+        $('#sending_t').show();
+        $('#send_t').hide();
+        $('#btn-send-fte').prop("disabled", true);
+
+        forward_to_experts(query_id, data);
+    }
+</script>

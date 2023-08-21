@@ -31,7 +31,7 @@ rel="stylesheet"
     <link rel="stylesheet" type="text/css" href="{% static 'css/annotorious.min.css' %}">
 
     <script src="{% static 'js/annotorious.min.js' %}"></script>
-    <script src="{% static 'js/annotations.w3c.js' %}"></script>
+    <script src="{% static 'js/annotations.w3c.json' %}"></script>
     <script src="{% static 'js/recogito-polyfills.js' %}"></script>
     <style>
       html, body {
@@ -79,9 +79,13 @@ rel="stylesheet"
         <button id="current-tool">RECTANGLE</button>
       </p>
       <div>
-        <img id="hallstatt" src="{{object.image.url}}" width="350" height="350">
+        <h1> Object ID = {{object.id}} </h1> 
+        {% csrf_token %}
+
+        <img id="hallstatt" src="{{object.image.url}}"  alt="{{object.id}}" width="500" height="410">
       </div>
     </div>
+    <input type="hidden" value="{% csrf_token %}" id="csrf_token_value">
   </div>
     <script>
       window.onload = function() {
@@ -106,48 +110,46 @@ rel="stylesheet"
         });
 
         anno.on('cancelSelected', function(a) {
-          console.log('cancel');
+          console.log('cancel the selection');
         });
 
         anno.on('changeSelected', function(selected, previous) {
           console.log('changed from', previous, 'to', selected);
         });
+      
 
-       
-        anno.on('createAnnotation', function(annotation) {
-          console.log('created annotation', annotation);
-      
-          // Extract annotation data
-          var imageId = 100; // Assuming this is the way to get the image ID
-          var x = annotation.x;
-          var y = annotation.y;
-          var width = annotation.width;
-          var height = annotation.height;
-          var color = annotation.color;
-      
-          // Create a data object to send to the server
-          var annotationData = {
-              image_id: imageId,
-              x: x,
-              y: y,
-              width: width,
-              height: height,
-              color: color
-          };
-      
-          // Send the data to the server using AJAX
-          $.ajax({
-              url: '/save_annotation/', // Update this URL to match your server's endpoint
-              type: 'POST',
-              data: annotationData,
-              success: function(response) {
-                  console.log('Server response:', response.message);
-              },
-              error: function(error) {
-                  console.error('Error:', error);
-              }
-          });
-      });
+        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        console.log(csrftoken)
+        
+        anno.on('createAnnotation', async (annotation, overrideId) => {
+                  // URL of the server endpoint
+                  console.log("Annotation creation")
+                  console.log(annotation)
+
+                  var myHeaders ={
+                    
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": csrftoken
+                  }
+
+
+                  var raw = JSON.stringify({
+                    "annotation_data": annotation,
+                    "image_id": "{{object.id}}"
+                  });
+                  
+                  console.log(raw)
+                  var requestOptions = {
+                    method: 'POST',
+                    headers: myHeaders,
+                    body: raw,
+                  };
+                  
+                  fetch("http://127.0.0.1:8000/save_annotation/", requestOptions)
+                    .then(response => response.text())
+                    .then(result => console.log(result))
+                    .catch(error => console.log('error', error));
+                    })
       
 
         anno.on('updateAnnotation', function(annotation, previous) {
@@ -162,12 +164,19 @@ rel="stylesheet"
           console.log('deleted', annotation);
         });
 
-        anno.on('mouseEnterAnnotation', function(annotation) {
+        anno.on('mouseEnterAnnotation', function(annotation, element) {
           console.log('enter', annotation);
+          console.log('children', element.children[0])
+          
         });
         
         anno.on('mouseLeaveAnnotation', function(annotation) {
           console.log('leave', annotation);
+        });
+
+        anno.on('startSelection', function(point) {
+          console.log(point.x, point.y)
+          
         });
         
 
@@ -185,3 +194,6 @@ rel="stylesheet"
     </script>
   </body>
 </html>
+
+
+
