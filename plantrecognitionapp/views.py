@@ -43,32 +43,18 @@ def save_annotation(request):
     else:
         return JsonResponse({"message": "Invalid request method"}, status=405)
 """
+
+
 class AnnotationView(APIView):
     def post(self, request):
 
-        
-        data = json.dumps(request.data)
-        data = json.loads(data)
-        print(data)
-
-        print("---------------------------------------------------")
-        annotation_data = data.get("annotation_data")
-        image_id = data.get("image_id")
+        annotation_data = request.data.get("annotation_data")
+        image_id = request.data.get("image_id")
         image = PlantImage.objects.filter(id=image_id).first()
-        
-        print(image_id)
-        # annotation_object = Annotation(
-        #     plant_images=image_id, json_data=annotation_data
-        # )
 
-        # annotation_object.save()
-        print(annotation_data)
-        b = Annotation.objects.create(
-            plant_images=image,
-            json_data=annotation_data
-        )
+        b = Annotation.objects.create(plant_images=image, json_data=annotation_data)
         b.save()
-        print(b)
+
         return Response("server side verified")
 
     def get(self, request):
