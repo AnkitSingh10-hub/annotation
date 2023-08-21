@@ -85,7 +85,6 @@ rel="stylesheet"
         <img id="hallstatt" src="{{object.image.url}}"  alt="{{object.id}}" width="500" height="410">
       </div>
     </div>
-    <input type="hidden" value="{% csrf_token %}" id="csrf_token_value">
   </div>
     <script>
       window.onload = function() {
@@ -119,41 +118,39 @@ rel="stylesheet"
       
 
         const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-        console.log(csrftoken)
-        
+
         anno.on('createAnnotation', async (annotation, overrideId) => {
-                  // URL of the server endpoint
-                  console.log("Annotation creation")
-                  console.log(annotation)
+                  // Assuming you have a form or some data to send
+                      const dataToSend = {
+                        plant_images: {{object.id}},  // Replace with the appropriate plant image ID
+                        json_data: annotation  // Replace with your actual JSON data
+                      };
+                      // URL for your AnnotationView's POST endpoint
+                      const url = 'http://127.0.0.1:8000/save_annotation/';
 
-                  var myHeaders ={
-                    
-                    "Content-Type": "application/json",
-                    "X-CSRFToken": csrftoken
-                  }
+                      // Send a POST request using the fetch API
+                      fetch(url, {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          'X-CSRFToken' : csrftoken
+                          // You might need to include additional headers like authentication tokens
+                        },
+                        body: JSON.stringify(dataToSend)
+                      })
 
+                      .then(response => response.json())
+                      .then(data => {
+                        console.log('Success:', data);
+                      })
+                      .catch(error => {
+                        console.error('Error:', error);
+                      });
 
-                  var raw = JSON.stringify({
-                    "annotation_data": annotation,
-                    "image_id": "{{object.id}}"
-                  });
-                  
-                  console.log(raw)
-                  var requestOptions = {
-                    method: 'POST',
-                    headers: myHeaders,
-                    body: raw,
-                  };
-                  
-                  fetch("http://127.0.0.1:8000/save_annotation/", requestOptions)
-                    .then(response => response.text())
-                    .then(result => console.log(result))
-                    .catch(error => console.log('error', error));
                     })
       
 
         anno.on('updateAnnotation', function(annotation, previous) {
-          console.log('updated', previous, 'with', annotation);
         });
 
         anno.on('clickAnnotation', function(annotation, shape) {

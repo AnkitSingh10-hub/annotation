@@ -947,7 +947,7 @@ svg.a9s-annotationlayer .a9s-selection-mask {
                         if (x && y) {
                             element.innerHTML += `<text class="annotationTags" x="${x}" y="${y - 25}">${tags}</text>`;
                         }
-                    });
+                    }); 
                     anno.on('mouseLeaveAnnotation', function(annotation, element) {
                         const tagTexts = element.getElementsByClassName('annotationTags');
                         for (const tag of tagTexts) {
